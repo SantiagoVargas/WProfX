@@ -1,0 +1,22 @@
+{
+  "name": "wprofx",
+  "version": "1.0.0",
+  "description": "WProfX =======================",
+  "main": "main.py",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jnejati/WProfX.git"
+  },
+  "author": "",
+  "bugs": {
+    "url": "https://github.com/jnejati/WProfX/issues"
+  },
+  "homepage": "https://github.com/jnejati/WProfX#readme",
+  "dependencies": {
+    "chrome-launcher": "^0.10.2",
+    "chrome-remote-interface": "^0.25.5"
+  }
+}
