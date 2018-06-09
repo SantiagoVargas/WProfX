@@ -1,83 +1,36 @@
 #!/usr/bin/env python3.5
 __author__ = 'jnejati'
 
-#import experiments
 import json
-import signal
-import pickle
 import shutil
-#import network_emulator
 import os
-#import convert
 from urllib.parse import urlparse
 import time
-#import modifications as modify
-#from bs4 import BeautifulSoup
-import urllib.request
-import urllib.response
-import io
-import gzip
 import subprocess
 import logging
-#import coloredlogs
-#coloredlogs.install(level='INFO')
 import timeit
+import sys
 
 
-def clear_folder(folder):
-    if os.path.isdir(folder):
-            for root, dirs, l_files in os.walk(folder):
-                for f in l_files:
-                    os.unlink(os.path.join(root, f))
-                for d in dirs:
-                    shutil.rmtree(os.path.join(root, d))
-    else:
-        os.makedirs(folder)
-
-def main():
+def main(out_path, sites_file, iterations):
     start = timeit.default_timer()
-    input_file = 'live_test.txt'
-    #base_dir = '/home/jnejati/PLTSpeed'
-    base_dir =  ''
-    config_file = 'confs/netProfiles_live.json'
-    repeat_no = 1
-    #perf_args = '-etask-clock,context-switches,branches,branch-misses,cache-misses,cache-references,cycles:u,cycles:k,page-faults,sched:sched_switch,sched:sched_stat_runtime,sched:sched_wakeup,instructions:u,instructions:k,dTLB-load-misses,dTLB-loads,dTLB-store-misses,dTLB-stores,iTLB-load-misses,iTLB-loads,L1-dcache-load-misses,L1-dcache-loads,L1-dcache-stores,L1-icache-load-misses,LLC-load-misses,LLC-loads,LLC-store-misses,LLC-stores'
-    with open(config_file, 'r') as f:
-        net_profile = json.load(f)[0]
-        _path =  os.path.join(base_dir, net_profile['device_type'] + '_' + net_profile['name'])
-        clear_folder(_path)
-    with open(os.path.join(base_dir, input_file)) as _sites:
+    with open(sites_file) as _sites:
         for _site in _sites:
-            #os.system('pkill chrome')
-            #os.system('pkill google-chrome-stable')
             time.sleep(5)
-            #os.system('DISPLAY=:7 sudo google-chrome-stable --remote-debugging-port=9222 --enable-benchmarking --enable-net-benchmarking --start-maximized  --ignore-certificate-errors --user-data-dir=$TMPDIR/chrome-profiling --no-default-browser-check &')
-            #time.sleep(15)
             _site = _site.strip()
             logging.info('Navigating to: ' + _site)
             s1 = urlparse(_site)
-            _site_data_folder = os.path.join(_path, s1.netloc)
+            _site_data_folder = os.path.join(out_path, s1.netloc)
             if not os.path.isdir(_site_data_folder):
                 os.mkdir(_site_data_folder)
-            for run_no in range(repeat_no):
+            for run_no in range(iterations):
                 _run_data_folder = os.path.join(_site_data_folder, 'run_' + str(run_no))
                 if not os.path.isdir(_run_data_folder):
                     os.mkdir(_run_data_folder)
-                    #_subfolders = ['trace', 'screenshot', 'analysis', 'summary', 'tcpdump', 'perf']
                     _subfolders = ['trace', 'screenshot', 'analysis', 'summary']
                     for folder in _subfolders:
                         os.mkdir(os.path.join(_run_data_folder, folder))
-                logging.info('Current profile: ' + net_profile['device_type'] + ' - ' + net_profile['name'] + ' run_no: ' + str(run_no) + ' site: ' + _site)
-                #os.system('pkill tcpdump')
-                #time.sleep(5)
-                #_tcpdump_folder = os.path.join(_run_data_folder, 'tcpdump')
-                #_tcpdump_file = os.path.join(_tcpdump_folder, str(run_no) + '_' + s1.netloc)
-                #_tcpdump_cmd = ['tcpdump', '-i', 'enp1s0f0', '-s', '0','-U', '-w', _tcpdump_file, 'not', 'port', '22']
-                #_tcpdump_proc = subprocess.Popen(_tcpdump_cmd)
-                #_tcpdump_pid = str(_tcpdump_proc.pid)
-                #_perf_folder = os.path.join(_run_data_folder, 'perf')
-                #_perf_file = os.path.join(_perf_folder, str(run_no) + '_' + s1.netloc)
-                #_perf_cmd = ['perf', 'stat', '-x,', perf_args,  '--output', _perf_file, 'timeout', '--signal=SIGINT', '50'] 
+                logging.info('Current site: ' + _site + ' - run_no: ' + str(run_no))
                 _trace_folder = os.path.join(_run_data_folder, 'trace')
                 _screenshot_folder = os.path.join(_run_data_folder, 'screenshot')
                 _summary_folder = os.path.join(_run_data_folder, 'summary')
@@ -87,18 +40,25 @@ def main():
                 logging.info(_trace_file, _screenshot_file, _summary_file)
                 time.sleep(5)
                 try:
-                    #_node_cmd = ['node', 'chrome_launcher.js', _site,  _trace_file, _summary_file, _screenshot_file, _tcpdump_pid]
                     _node_cmd = ['node', 'chrome_launcher.js', _site,  _trace_file, _summary_file, _screenshot_file]
-                    #_cmd = _perf_cmd + _node_cmd
                     _cmd =  _node_cmd
                     subprocess.call(_cmd, timeout = 60)
                 except subprocess.TimeoutExpired:
-                    print("Timeout:  ", _site, run_no)
-                    with open (os.path.join(_site_data_folder, 'log.txt'), 'w+') as _log:
-                        _log.write("Timed out:  " +  _site + ' ' +  str(run_no) + '\n')
+                    logging.error("Timeout:  " +  _site + ' - ' + run_no)
                 time.sleep(5)
-            #time.sleep(2)
     stop = timeit.default_timer()
-    logging.info(100*'-' + '\nTotal time: ' + str(stop -start)) 
+    logging.info(100*'-' + '\nTotal time: ' + str(stop -start))
+
+# Use config files for command line
 if __name__ == '__main__':
-    main()
+    websites_file = sys.argv[1]
+    iterations = sys.argv[2]
+    config_file = 'confs/netProfiles.json'
+    if sys.argv[3]:
+        config_file = sys.argv[3]
+    with open(config_file, 'r') as f:
+        # Todo: Loop through these
+        net_profiles = json.load(f)
+        net_profile = net_profiles[0]
+        output_path = net_profile['device_type'] + '_' + net_profile['name']
+        main(output_path, websites_file, iterations)
